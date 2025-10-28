@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Folder Viewer (Tree View)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            /* disable browser scroll */
+            font-family: sans-serif;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+
+        li {
+            margin: 3px 0;
+        }
+
+        .folder {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .folder::before {
+            font-family: "bootstrap-icons";
+            content: "\f3d1"; /* bi-folder */
+            margin-right: 4px;
+            color: #ffcc00;
+            transition: transform 0.2s;
+        }
+
+        .folder.open::before {
+            content: "\f3d2"; /* bi-folder2-open */
+        }
+
+        .nested {
+            display: none;
+        }
+
+        .active {
+            display: block;
+        }
+
+        input[type="text"] {
+            width: 70%;
+        }
+
+        label {
+            user-select: none;
+        }
+
+        /* Container setup */
+        .container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .form-area {
+            flex: 0 0 auto;
+        }
+
+        .file-trees {
+            flex: 1 1 auto;
+            display: flex;
+            gap: 1rem;
+            overflow: hidden;
+        }
+
+        .tree-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 0;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .search-wrapper {
+            position: sticky;
+            top: 0;
+            background: white; /* same as container background */
+            z-index: 10;
+            padding-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="form-area">
+            <h2>File translation with AI</h2>
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label for="modelSelector" class="form-label">Model</label>
+                    <select class="form-select" id="modelSelector">
+                        <option value="option1">gemini-2.5-flash</option>
+                        <option value="option2">gemini-2.5-pro</option>
+                        <option value="option3">gpt (soon)</option>
+                        <option value="option4">grok (soon)</option>
+                        <option value="option5">claude (soon)</option>
+                    </select>
+                </div>
+                <div class="col-md-9">
+                    <label for="prompt" class="form-label">Prompt</label>
+                    <input type="text" class="form-control" id="promptTxt"
+                        placeholder="Insert the prompt to facilitate the operation">
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label for="maxWorkers" class="form-label">Number of workers</label>
+                    <input type="number" class="form-control" id="maxWorkers" min="1" max="10" value="1" step="1">
+                </div>
+                <div class="col-md-9">
+                    <label for="API_JEY" class="form-label">API_KEY</label>
+                    <input type="text" class="form-control" id="API_JEY" placeholder="Insert the model's API key">
+                </div>
+                
+            </div>
+
+            <div class="row mb-3 g-3">
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="w-100">
+                        <label class="form-label">Input Folder</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="inputFolderPath" readonly disabled
+                                value="Select a folder">
+                            <button class="btn btn-outline-primary" id="inputFolderBtn">Change</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="w-100">
+                        <label class="form-label">Output Folder</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="outputFolderPath" readonly disabled
+                                value="Select a folder">
+                            <button class="btn btn-outline-primary" id="outputFolderBtn">Change</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="d-flex gap-2 align-items-center">
+                    <!-- Left buttons -->
+                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse"
+                        aria-expanded="false" aria-controls="filtersCollapse">
+                        <i class="bi bi-sliders"></i> Filters
+                    </button>
+
+                    <!-- Push Translate button to right -->
+                    <button class="btn btn-success ms-auto" id="translateBtn">Translate selection</button>
+                </div>
+
+                <!-- Collapsible Filters Panel -->
+            <!-- Collapsible Filters Panel -->
+            <div class="collapse mt-2" id="filtersCollapse">
+                <div class="card card-body p-3 position-relative">
+            
+                    <!-- Top: Add Condition -->
+                    <div class="d-flex justify-content-start mb-3">
+                        <button class="btn btn-sm btn-outline-primary" id="addConditionBtn">+ Add Condition</button>
+                    </div>
+            
+                    <!-- Container for conditions -->
+                    <div id="conditionsContainer"></div>
+            
+                    <!-- Bottom: Apply, Save, Clear -->
+                    <div class="d-flex justify-content-between mt-3">
+                        <div>
+                            <button class="btn btn-warning btn-sm" id="saveFiltersBtn">Save</button>
+                            <button class="btn btn-success btn-sm me-2" id="applyFiltersBtn">Apply</button>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm" id="clearFiltersBtn">Clear</button>
+                    </div>
+                </div>
+            </div>
+
+
+            </div>
+
+        </div>
+
+        <div class="file-trees">
+            <div class="tree-container">
+                <h5>Input folder contents</h5>    
+                <div class="search-wrapper">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="fileSearch" placeholder="Search files and/or folders...">
+                        <button class="btn btn-outline-secondary" id="toggleInputCollapseBtn" type="button">
+                            <i class="bi bi-arrows-collapse"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" id="toggleViewHiddenBtn" type="button">
+                            <i class="bi bi-eye-slash-fill"></i>
+                        </button>
+                    </div>
+                </div>
+                <ul id="fileList" class="list-unstyled"></ul>
+            </div>
+
+            <div class="tree-container">
+                <h5>Selected files</h5>
+                <ul id="selectedFilesTree" class="list-unstyled"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const selectInputFolder = document.getElementById('inputFolderBtn');
+        const selectOutputFolder = document.getElementById('outputFolderBtn');
+        const fileSearchInput = document.getElementById('fileSearch');
+        const toggleInputCollapseBtn = document.getElementById('toggleInputCollapseBtn');
+        const selectedFilesTree = document.getElementById('selectedFilesTree');
+        const addConditionBtn = document.getElementById('addConditionBtn');
+        const translateBtn = document.getElementById('translateBtn');
+        let allFiles = {};
+
+            const conditionsContainer = document.getElementById('conditionsContainer');
+            const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+            addConditionBtn.addEventListener('click', () => {
+                const row = document.createElement('div');
+                row.classList.add('d-flex', 'align-items-center', 'mb-2', 'condition-row');
+
+                row.innerHTML = `
+                    <select class="form-select form-select-sm me-2" style="width: 180px;">
+                        <option value="contains">File contains</option>
+                        <option value="contains">File contains (case)</option>
+                        <option value="modified">Regex contains (line)</option>
+                        <option value="modified">Ignore file paths (csv)</option>
+                    </select>
+                    <input type="text" class="form-control form-control-sm me-2" placeholder="Enter value">
+                    <button class="btn btn-sm btn-outline-secondary me-1 edit-condition">
+                        <i class="bi bi-pencil"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger remove-condition">
+                        <i class="bi bi-x-lg"></i> Remove
+                    </button>
+                    `;
+
+                conditionsContainer.appendChild(row);
+
+                // Remove row
+                row.querySelector('.remove-condition').addEventListener('click', () => row.remove());
+
+                // Edit functionality
+                row.querySelector('.edit-condition').addEventListener('click', () => {
+                    const input = row.querySelector('input');
+                    input.focus();
+                });
+            });
+
+            // Clear all conditions
+            clearFiltersBtn.addEventListener('click', () => {
+                conditionsContainer.innerHTML = '';
+            });
+        // Search/filter files and folders
+        fileSearchInput.addEventListener('input', () => {
+            const searchTerm = fileSearchInput.value.toLowerCase();
+
+            function filterTree(li) {
+                const folderNameEl = li.querySelector('.folder');
+                const fileLabelEl = li.querySelector('label.file');
+
+                let matched = false;
+
+                if (fileLabelEl) {
+                    const name = fileLabelEl.textContent.toLowerCase();
+                    matched = name.includes(searchTerm);
+                }
+
+                if (folderNameEl) {
+                    const name = folderNameEl.textContent.toLowerCase();
+                    const childLis = li.querySelectorAll(':scope > ul > li');
+                    let anyChildMatched = false;
+                    childLis.forEach(child => {
+                        if (filterTree(child)) anyChildMatched = true;
+                    });
+                    matched = name.includes(searchTerm) || anyChildMatched;
+
+                    const nestedUl = li.querySelector(':scope > ul');
+                    if (nestedUl) {
+                        nestedUl.classList.toggle('active', anyChildMatched || name.includes(searchTerm));
+                    }
+                }
+
+                li.style.display = matched ? '' : 'none';
+                return matched;
+            }
+
+            const rootLis = document.querySelectorAll('#fileList > li');
+            rootLis.forEach(li => filterTree(li));
+        });
+
+        // Convert flat list of file paths into a nested tree
+        function buildTreeStructure(files, basePath) {
+            const root = {};
+
+            files.forEach(file => {
+                let relativePath = file.inputPath;
+                if (relativePath.startsWith(basePath)) {
+                    relativePath = relativePath.slice(basePath.length);
+                    if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+                        relativePath = relativePath.slice(1);
+                    }
+                }
+
+                const parts = relativePath.split(/[\\/]/);
+                let current = root;
+
+                parts.forEach((part, index) => {
+                    if (!current[part]) {
+                        current[part] = (index === parts.length - 1) ? { __file: file } : {};
+                    }
+                    current = current[part];
+                });
+            });
+
+            function convertToArray(node) {
+                return Object.entries(node).map(([name, value]) => {
+                    if (value.__file) {
+                        return { type: 'file', name, inputPath: value.__file.inputPath };
+                    }
+                    return { type: 'folder', name, children: convertToArray(value) };
+                });
+            }
+
+            return convertToArray(root);
+        }
+        
+        // Recursive rendering of the tree
+        function createTree(parent, items) {
+            items.forEach(item => {
+                const li = document.createElement('li');
+
+                if (item.type === 'folder') {
+                    const folderId = `folder-${Math.random().toString(36).substr(2, 9)}`;
+
+                    li.innerHTML = `
+                        <input type="checkbox" class="folder-checkbox" id="${folderId}">
+                        <span class="folder">${item.name}</span>
+                    `;
+
+                    const ul = document.createElement('ul');
+                    ul.classList.add('nested');
+                    createTree(ul, item.children);
+                    li.appendChild(ul);
+
+                    const folderName = li.querySelector('.folder');
+                    const folderCheckbox = li.querySelector('.folder-checkbox');
+
+                    folderName.addEventListener('click', (e) => {
+                         ul.classList.toggle('active');
+                        folderName.classList.toggle('open');
+                        e.stopPropagation();
+                    });
+
+                    folderCheckbox.addEventListener('change', (e) => {
+                        const checked = e.target.checked;
+                        const searchActive = fileSearchInput.value.trim() !== '';
+
+                        // Recursive function to check/uncheck children
+                        function setChildren(li) {
+                            const children = Array.from(li.querySelectorAll('li'));
+
+                            children.forEach(child => {
+                                const cb = child.querySelector('input[type="checkbox"]:not(.folder-checkbox)');
+                                const folderCb = child.querySelector('.folder-checkbox');
+
+                                if (cb) {
+                                    if (!searchActive || child.style.display !== 'none') {
+                                        cb.checked = checked;
+                                        cb.indeterminate = false;
+                                    }
+                                }
+
+                                if (folderCb) {
+                                    if (!searchActive || child.style.display !== 'none') {
+                                        folderCb.checked = checked;
+                                        folderCb.indeterminate = false;
+                                    }
+                                    // Recurse into folder children
+                                    setChildren(child);
+                                }
+                            });
+                        }
+
+                        setChildren(li);
+
+                        // Update parent folders
+                        updateParentFoldersAfterChange(e.target);
+                    });
+
+                } else {
+                    li.innerHTML = `<label class="file">
+                                        <i class="bi bi-file-earmark-code-fill text-primary me-1"></i>
+                                        <input type="checkbox" value="${item.inputPath}"> ${item.name}
+                                    </label>`;
+
+                                    const fileCb = li.querySelector('input[type="checkbox"]');
+                    fileCb.addEventListener('change', (e) => {
+                        if (e.target.checked) {
+                            checkParentFolders(e.target);
+                        } else {
+                            uncheckEmptyParentFolders(e.target);
+                        }
+                    });
+                }
+
+                parent.appendChild(li);
+            });
+        }
+        function updateParentFoldersAfterChange(cb) {
+            const searchActive = fileSearchInput.value.trim() !== '';
+            let li = cb.closest('li');
+
+            while (li) {
+                const parentUl = li.closest('ul');
+                const parentLi = parentUl ? parentUl.closest('li') : null;
+                if (!parentLi) break;
+
+                const parentCheckbox = parentLi.querySelector('.folder-checkbox');
+                if (parentCheckbox) {
+                    let childCbs = Array.from(parentLi.querySelectorAll('input[type="checkbox"]:not(.folder-checkbox)'));
+                    if (searchActive) {
+                        childCbs = childCbs.filter(c => c.closest('li').style.display !== 'none');
+                    }
+
+                    if (childCbs.length) {
+                        const allChecked = childCbs.every(c => c.checked);
+                        const noneChecked = childCbs.every(c => !c.checked);
+
+                        parentCheckbox.checked = allChecked;
+                        parentCheckbox.indeterminate = !allChecked && !noneChecked;
+                    }
+                }
+
+                li = parentLi;
+            }
+        }
+
+
+        function buildTreeView(flatFiles, basePath) {
+            const tree = buildTreeStructure(flatFiles, basePath);
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            createTree(fileList, tree);
+        }
+
+        function buildSelectedTree() {
+            const checkedFiles = Array.from(document.querySelectorAll('#fileList input[type="checkbox"]:checked'))
+                .filter(cb => !cb.classList.contains('folder-checkbox'))
+                .map(cb => ({ inputPath: cb.value }));
+
+            return buildTreeStructure(checkedFiles, document.getElementById('inputFolderPath').value);
+        }
+
+        function renderSelectedFilesTree() {
+            selectedFilesTree.innerHTML = '';
+            const tree = buildSelectedTree();
+
+            function createSelectedTree(parent, items) {
+                items.forEach(item => {
+                    const li = document.createElement('li');
+
+                    if (item.type === 'folder') {
+                        li.innerHTML = `<span class="folder">${item.name}                         
+                                            <span class="remove-folder text-danger" style="cursor:pointer;color:red;margin-left:5px;">
+                                                <i class="bi bi-x-circle"></i>
+                                            </span> 
+                                        
+                                        </span>`;
+                                        const ul = document.createElement('ul');
+                        ul.classList.add('nested', 'active');
+                        createSelectedTree(ul, item.children);
+                        li.appendChild(ul);
+
+                        const folderName = li.querySelector('.folder');
+                        folderName.addEventListener('click', e => { ul.classList.toggle('active'); e.stopPropagation(); });
+
+                        const removeFolder = li.querySelector('.remove-folder');
+                        removeFolder.addEventListener('click', e => {
+                            e.stopPropagation();
+                            ul.querySelectorAll('li span.file').forEach(f => {
+                                const path = f.dataset.path;
+                                const mainCb = document.querySelector(`#fileList input[type="checkbox"][value="${path}"]`);
+                                if (mainCb) mainCb.checked = false;
+                                uncheckEmptyParentFolders(mainCb);
+                            });
+
+                            const mainFolderCb = Array.from(document.querySelectorAll('#fileList .folder-checkbox'))
+                                .find(cb => cb.nextElementSibling.textContent.trim().startsWith(item.name));
+                            if (mainFolderCb) mainFolderCb.checked = false;
+
+                            renderSelectedFilesTree();
+                        });
+
+                    } else {
+                         li.innerHTML = `<label class="file">
+                                        <i class="bi bi-file-earmark-code-fill text-primary me-1"></i>
+                                        <span class="file" data-path="${item.inputPath}">${item.name}
+                                            <span class="remove-file text-danger" style="cursor:pointer;margin-left:5px;">
+                                                <i class="bi bi-x-circle"></i>
+                                            </span>    
+                                        </span>
+                                        </label>`;
+                        const removeBtn = li.querySelector('.remove-file');
+                        removeBtn.addEventListener('click', () => {
+                            const mainCb = document.querySelector(`#fileList input[type="checkbox"][value="${item.inputPath}"]`);
+                            if (mainCb) mainCb.checked = false;
+                            uncheckEmptyParentFolders(mainCb);
+                            renderSelectedFilesTree();
+                        });
+                    }
+
+                    parent.appendChild(li);
+                });
+            }
+
+            createSelectedTree(selectedFilesTree, tree);
+        }
+        async function fetchFilesInit() {
+            const result = await window.electronAPI.getCurrentFiles();
+
+            buildTreeView(result["files"], result["path"]);
+        }
+        function updateParentFolderState(cb) {
+            const searchActive = fileSearchInput.value.trim() !== '';
+            let li = cb.closest('li');
+
+            while (li) {
+                const parentUl = li.closest('ul');
+                const parentLi = parentUl ? parentUl.closest('li') : null;
+                if (!parentLi) break;
+
+                const parentCheckbox = parentLi.querySelector('.folder-checkbox');
+                if (parentCheckbox) {
+                    let childCbs = Array.from(parentLi.querySelectorAll('input[type="checkbox"]:not(.folder-checkbox)'));
+                    if (searchActive) {
+                        childCbs = childCbs.filter(c => c.closest('li').style.display !== 'none');
+                    }
+
+                    const allChecked = childCbs.length && childCbs.every(c => c.checked);
+                    const noneChecked = childCbs.every(c => !c.checked);
+
+                    parentCheckbox.checked = allChecked;
+                    parentCheckbox.indeterminate = !allChecked && !noneChecked;
+                }
+
+                li = parentLi;
+            }
+        }
+
+
+        function checkParentFolders(cb) {
+            updateParentFolderState(cb);
+        }
+
+        function uncheckEmptyParentFolders(cb) {
+            updateParentFolderState(cb);
+        }
+        
+        function getSelectedFilesFromPane() {
+            return Array.from(document.querySelectorAll('#selectedFilesTree .file'))
+                .map(span => {
+                    const path = span.dataset.path;
+                    if (path !== undefined) {
+                        return { inputPath: path, done: false };
+                    }
+                    return null;
+                })
+                .filter(item => item !== null);
+        }
+
+        translateBtn.addEventListener('click', async () => {
+            const selectedFiles = getSelectedFilesFromPane();
+            if (!selectedFiles.length) return
+            var model = document.getElementById("modelSelector").value
+            var prompt = document.getElementById("promptTxt").value
+            var workers = document.getElementById("maxWorkers").value
+
+            var result = await window.electronAPI.translateFiles(selectedFiles, model, workers, prompt);
+            if(result["status"]){
+                alert("Translation queued successfully")
+            }else{
+                alert("Error queuing files' translation: " + result["err"])
+            }
+        });
+
+        toggleInputCollapseBtn.addEventListener('click', () => {
+            const allFolders = document.querySelectorAll('#fileList ul.nested');
+            const anyCollapsed = Array.from(allFolders).some(ul => !ul.classList.contains('active'));
+            allFolders.forEach(ul => {
+                if (anyCollapsed) ul.classList.add('active');
+                else ul.classList.remove('active');
+            });
+        });
+
+        document.getElementById('fileList').addEventListener('change', () => {
+            renderSelectedFilesTree();
+        });
+
+        selectInputFolder.addEventListener('click', async () => {
+            const result = await window.electronAPI.selectInputFolder();
+            if (result) {
+                document.getElementById("inputFolderPath").value = result["newPath"];
+                buildTreeView(result["files"], result["newPath"]);
+            }
+        });
+
+        selectOutputFolder.addEventListener('click', async () => {
+            const result = await window.electronAPI.selectOutputFolder();
+            if (result) document.getElementById("outputFolderPath").value = result;
+        });
+    </script>
+</body>
+
+</html>

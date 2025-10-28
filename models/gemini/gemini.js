@@ -1,0 +1,112 @@
+const { exec } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const {ipcMain, BrowserWindow} = require('electron')
+
+
+
+class GeminiTranslate {
+  
+  constructor(TAG, MAX_WORKERS, PROMPT_TEMPLATE, FSHelper, API_KEY="") {
+    this.windows = [];
+    this.API_KEY = API_KEY;
+    this.FSHelper = FSHelper
+    this.MAX_WORKERS = MAX_WORKERS
+    this.PROMPT_TEMPLATE = PROMPT_TEMPLATE
+    this.TAG = TAG
+  }
+  
+  #sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  
+  tag(){
+    return this.TAG
+  }
+
+  getWorkersCount() {
+    return this.MAX_WORKERS
+  }
+
+  async #runTask(worker, task){
+    const prompt = this.PROMPT_TEMPLATE
+    console.log(prompt)
+    // return new Promise((resolve) => {
+    //    console.warn(`[Worker ${worker}] Starting translation for: ${task["inputPath"]}`);
+    //     execFile('cat', [`${task}`, '-m', this.TAG, '-y', '-p', prompt], { encoding: 'utf-8' }, (error, stdout, stderr) => {
+    //         if (error) {
+    //             console.error(`[Worker ${worker}] Error: ${error.message}`);
+    //             return resolve(false);
+    //         }
+    //         console.log(`[Worker ${worker}] Translation finished for: ${task["inputPath"]}`);
+    //         this.FSHelper.saveToFile(task["outputPath"], stdout);
+    //         resolve(true);
+    //     });
+    // });
+
+    return new Promise((resolve) => {
+        console.error(`[Worker ${worker}] Starting translation for: ${task["inputPath"]}`);
+
+        // ensure the folder exists
+        fs.mkdirSync(path.dirname(task.outputPath), { recursive: true });
+
+        // single shell command, fastest option
+        const cmd = `cat ${task["inputPath"]} | gemini -m ${this.TAG} -y -p "${this.PROMPT_TEMPLATE}" > ${task["outputPath"]}`;
+
+        exec(cmd, { shell: true }, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`[Worker ${worker}] Error: ${error.message}`);
+                return resolve(false);
+            }
+            console.error(`[Worker ${worker}] Translation finished for: ${task.inputPath}`);
+            resolve(true);
+        });
+    });
+        
+  }
+
+  async #start(worker, tasks) {
+    var count = 0;
+    var hasFailedTasks = false
+    do{
+      for (const task of tasks) {
+        if (!task["done"]) {
+          var result = await this.#runTask(worker, {"inputPath" :task["inputPath"], "outputPath": task["inputPath"].replace(this.FSHelper.INPUT_BASE_PATH, this.FSHelper.OUTPUT_BASE_PATH)})
+          
+          if(result) {
+            ++this.FSHelper.TOTAL_PROCESSED
+            task["done"] = true
+          }else{
+            hasFailedTasks = true
+          }
+        }
+      }
+      if(hasFailedTasks){
+        await this.#sleep(1000)
+        ++count
+      } 
+      
+    }while(hasFailedTasks && count < 3)
+    console.log("[" + this.TAG + "] Worker " +  worker + " finished!!")
+  }
+  
+  
+  async translate(tasksSets) {
+    // if there's an API key, attempt cli
+    // otherwise use browser manipulation
+    
+    console.log("[" + this.TAG + "] Starting translation...")
+    
+    for(var i = 0; i < this.MAX_WORKERS; i++) {
+      try{
+        var tasks = tasksSets[i]
+        if(tasks) this.#start(i, tasks)
+      }catch(e){
+        console.error("[translate] Err: " + e)
+        return
+      }
+    }
+  }
+}
+
+module.exports = GeminiTranslate;
