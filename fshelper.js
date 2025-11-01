@@ -54,7 +54,6 @@ class FSHelper {
     }
 
     getFiles() {
-        
         return this.INPUT_FOLDER_FILES
     }
 

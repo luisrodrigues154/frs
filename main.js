@@ -1,6 +1,6 @@
 
 // imports 
-const {app, ipcMain, dialog} = require('electron');
+const {app,BrowserWindow, ipcMain, dialog} = require('electron');
 const FSHelper =  require('./fshelper.js')
 const AppView = require("./ui/index.js")
 
@@ -15,7 +15,7 @@ app.whenReady().then(async () => {
 
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createAppWindow();
+  if (BrowserWindow.getAllWindows().length === 0 && ((!appView) || appView == null)) appView.createWindow();
 });
 
 app.on('window-all-closed', () => {

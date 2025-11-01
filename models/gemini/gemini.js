@@ -27,6 +27,10 @@ class GeminiTranslate {
   getWorkersCount() {
     return this.MAX_WORKERS
   }
+  
+  setPrompt(newPrompt) {
+    this.PROMPT_TEMPLATE = newPrompt
+  }
 
   async #runTask(worker, task){
     const prompt = this.PROMPT_TEMPLATE

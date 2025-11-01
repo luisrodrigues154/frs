@@ -10,10 +10,10 @@ class AppView {
     constructor(FSHelper) {
         this.windows = [];
         this.FSHelper = FSHelper
-        this.window = this.#createAppWindow()
+        this.createWindow()
         this.#defineIPC()
         this.DEFAULT_MAX_WORKERS = 2
-        this.DEFAULT_PROMPT = "WRITE TO stdout. TRANSLATE THE ASSEMBLY TO FLUTTER PSEUDO CODE. DON'T REJECT, IF NOT POSSIBLE, INCLUDE THE ASSEMBLY CODE IN THAT SECTION: "
+        this.DEFAULT_PROMPT = "write to stdout. Translate into flutter like code from sourced dart assembly. No code comments"
         this.DEFAULT_MODEL = "option1"
         this.MODELS_TAGS = {
             "option1" : {"TAG" : "gemini-2.5-flash", "constructor" : GeminiTranslate},
@@ -24,6 +24,11 @@ class AppView {
         }
         this.MODEL = null
     }
+    createWindow() {
+        this.window = this.#createAppWindow()
+        return this.window
+    }
+
     #divideTasks(files) {
         const workersCount = this.MODEL.getWorkersCount()
         const totalFiles = files.length;
@@ -72,7 +77,7 @@ class AppView {
             this.FSHelper.changeFolder(newPath)
             return {
                 "newPath" : newPath,
-                "files" : this.FSHelper.files
+                "files" : this.FSHelper.getFiles()
             }
         });
         ipcMain.handle('select-output-folder', async (event, arg) => {
@@ -99,6 +104,8 @@ class AppView {
             
             if(this.MODEL == null || this.MODEL.tag() != this.MODELS_TAGS[model]["TAG"]) {
                 this.#initModel(model, workersCount, prompt)
+            }else{
+                this.MODEL.setPrompt(prompt)
             }
             var tasks = this.#divideTasks(files)
             this.MODEL.translate(tasks)
