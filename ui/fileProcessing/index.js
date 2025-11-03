@@ -2,10 +2,10 @@
 
 const {app,BrowserWindow, ipcMain, dialog} = require('electron');
 const path = require('path');
-const  GeminiTranslate  = require('../models/gemini/gemini.js');
+const  GeminiTranslate  = require('../../models/gemini/gemini.js');
 
 
-class AppView {
+class FileProcessingScreen {
   
     constructor(FSHelper) {
         this.windows = [];
@@ -35,12 +35,9 @@ class AppView {
         const filesPerWorker = Math.floor(totalFiles / workersCount);
         const result = [];
 
-        if(totalFiles <= workersCount) {
-            // Handle case where there are fewer tasks than workers
-            console.log("workers can handle all work singularly")
+        if(totalFiles <= workersCount) {            
             for(let i=0; i<totalFiles; i++){
                 result.push([files[i]])
-                console.log(files[i])
             }
         }else{
             for (let i = 0; i < workersCount; i++) {
@@ -57,24 +54,29 @@ class AppView {
     }
 
     #initModel(model, workersCount, prompt, API_KEY=""){
-        //either make an execution map, or switch case
-        // syntax for models is model(TAG, MAX_WORKERS, PROMPT_TEMPLATE, FSHelper, API_KEY="")
         var TAG = this.MODELS_TAGS[model]["TAG"]
         this.MODEL = new this.MODELS_TAGS[model]["constructor"](TAG, workersCount, prompt, this.FSHelper, API_KEY)
     }
 
-
     #defineIPC(){
+        try{
+            ipcMain.removeHandler('select-input-folder');
+            ipcMain.removeHandler('select-output-folder');
+            ipcMain.removeHandler("get-current-files")
+            ipcMain.removeHandler("translate-files")
+        }catch(e) {
+
+        }
         ipcMain.handle('select-input-folder', async (event, arg) => {
             
-            const result = await dialog.showOpenDialog({
-                title: 'Select input folder',
-                properties: ['openDirectory'],
-                defaultPath: process.cwd(),
-            });
+            const result = await this.FSHelper.openFSDialog(
+                this.window,
+                'Select input folder',
+                ['openDirectory']
+            );
             if (result.canceled) return null;
             var newPath = result.filePaths[0];
-            this.FSHelper.changeFolder(newPath)
+            this.FSHelper.changeInputFolder(newPath)
             return {
                 "newPath" : newPath,
                 "files" : this.FSHelper.getFiles()
@@ -82,13 +84,13 @@ class AppView {
         });
         ipcMain.handle('select-output-folder', async (event, arg) => {
             
-            const result = await dialog.showOpenDialog({
-                title: 'Select output folder',
-                properties: ['openDirectory'],
-                defaultPath: process.cwd(),
-            });
+            const result = await this.FSHelper.openFSDialog(
+                this.window,
+                'Select output folder',
+                ['openDirectory']
+            );
             if (result.canceled) return null;
-            
+            this.FSHelper.changeOutputFolder(result.filePaths[0])
             return result.filePaths[0];
         });
         ipcMain.handle('get-current-files', async (event, arg) => {
@@ -103,18 +105,23 @@ class AppView {
             console.log("[translate-files] Called with: " + files.length + " file(s) for " + workersCount + " workers, using " + model)
             
             if(this.MODEL == null || this.MODEL.tag() != this.MODELS_TAGS[model]["TAG"]) {
-                this.#initModel(model, workersCount, prompt)
+                this.#initModel(model, workersCount, prompt, this)
             }else{
                 this.MODEL.setPrompt(prompt)
             }
+            console.log(files)
+            
             var tasks = this.#divideTasks(files)
             this.MODEL.translate(tasks)
             return {
-                "status" : true    
+                "status" : true, 
+                "tasks" : tasks
             }
         });
     }
-
+    updateTaskUI(domId, status) {
+        this.window.executeJavaScript(``)
+    }
     #createAppWindow() {
         const win = new BrowserWindow({
             width: 1920,
@@ -125,7 +132,7 @@ class AppView {
             },
         });
         win.webContents.openDevTools({ mode: 'left' });
-        win.loadFile(path.join(__dirname, '../ui/index.html')); // Load ui/index.html
+        win.loadFile(path.join(__dirname, '../fileProcessing/index.html')); 
         win.webContents.on('did-finish-load', () => {
             
             win.webContents.executeJavaScript(`
@@ -147,4 +154,4 @@ class AppView {
 
 }
 
-module.exports = AppView;
+module.exports = FileProcessingScreen;

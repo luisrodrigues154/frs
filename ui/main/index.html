@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Entry Screen</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #5b7cb9 0%, #454f61 100%);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .entry-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            transition: transform 0.3s ease;
+        }
+
+        .entry-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .entry-btn {
+            width: 100%;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+            font-size: 1.1rem;
+            border-radius: 0.625rem;
+            transition: all 0.3s ease, background-color 0.3s ease;
+        }
+
+        .entry-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.03);
+        }
+
+        .apks {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+
+        .files {
+            background-color: #e07d1f;
+            color: #fff;
+        }
+
+        .entry-text a {
+            text-decoration: underline;
+            color: #0d6efd;
+        }
+
+        .entry-btn i {
+            margin-right: 0.5rem;
+            font-size: 1.25rem;
+        }
+
+        .file-path-input {
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            padding: 0.5rem;
+            width: 100%;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        .file-path-label {
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="entry-card">
+        <p class="entry-text mb-4">
+            This tool ships a cloned version of blutter, without modifications. <b>Please ensure dependencies are
+                met:</b>
+            <a href="https://github.com/worawit/blutter" target="_blank">GitHub Repo</a>
+        </p>
+
+        <h3 class="mb-4 fw-bold">Choose action</h3>
+
+        <div class="d-flex gap-2 mb-3">
+            <!-- Status button (hidden initially) -->
+            <button class="btn entry-btn d-none" id="apkStatusBtn">
+                <i class="bi-android me-2"></i>
+                <span id="apkStatusText">Processing...</span>
+                <div class="spinner-border spinner-border-sm ms-2" role="status" id="apkSpinner">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </button>
+
+            <!-- Select APK button -->
+            <button class="btn entry-btn apks flex-grow-1" id="selectApkBtn" onclick="chooseEntry('apk')">
+                <i class="bi-android me-2"></i> Select APK/Zip file
+            </button>
+        </div>
+
+        <div class="mb-3">
+            <input type="text" id="apkPath" class="file-path-input" placeholder="No file selected..." readonly>
+        </div>
+
+        <button class="btn entry-btn files" onclick="chooseEntry('file')">
+            <i class="bi-gear-fill"></i> File Processing
+        </button>
+    </div>
+
+    <script>
+        const apkStatusBtn = document.getElementById('apkStatusBtn');
+        const apkStatusText = document.getElementById('apkStatusText');
+        const apkSpinner = document.getElementById('apkSpinner');
+        const selectApkBtn = document.getElementById('selectApkBtn');
+        const apkPathInput = document.getElementById('apkPath');
+
+        function updateAPKStatus(result) {
+            let timeout = 2000;
+
+            apkStatusBtn.classList.remove('btn-success', 'btn-danger', 'btn-warning', 'btn-info');
+
+            switch (result.status) {
+                case "success":
+                    apkStatusText.textContent = "Apk processed successfully!";
+                    apkPathInput.value = "Tasks finished.";
+                    apkStatusBtn.classList.add("btn-success");
+                    break;
+
+                case "selected":
+                    apkStatusText.textContent = "Processing APK";
+                    apkPathInput.value = result.path || "";
+                    apkStatusBtn.classList.add("btn-warning");
+                    break;
+
+                case "error":
+                    apkStatusText.textContent = "Error";
+                    apkPathInput.value = result.msg || "Unknown error";
+                    apkStatusBtn.classList.add("btn-danger");
+                    timeout = 5000;
+                    break;
+
+                case "aborted":
+                    apkStatusText.textContent = "Selection cancelled";
+                    apkPathInput.value = "Cancelled by the user ...";
+                    apkStatusBtn.classList.add("btn-info");
+
+                    break;
+            }
+
+            if (result.timeout) {
+                apkSpinner.classList.add('d-none');
+                setTimeout(() => {
+                    apkStatusBtn.classList.add('d-none');
+                    selectApkBtn.classList.remove('d-none');
+                    apkPathInput.value = "";
+                }, timeout);
+            }
+        }
+
+        async function chooseEntry(type) {
+            if (type === 'apk') {
+                selectApkBtn.classList.add('d-none');
+                apkStatusBtn.classList.remove('d-none');
+                apkSpinner.classList.remove('d-none');
+                apkStatusText.textContent = "Processing...";
+
+                // Trigger Electron event (or mock for testing)
+                if (window.electronAPI?.selectApk) {
+                    await window.electronAPI.selectApk();
+                } else {
+                    // Mock for browser testing
+                    setTimeout(() => {
+                        updateAPKStatus({ status: "selected", path: "/path/to/apk/file.apk" });
+                        setTimeout(() => {
+                            updateAPKStatus({ status: "success", timeout: true });
+                        }, 2000);
+                    }, 1000);
+                }
+            } else {
+                if (window.electronAPI?.fileTranslation) {
+                    window.electronAPI.fileTranslation();
+                    window.close();
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

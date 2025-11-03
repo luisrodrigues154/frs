@@ -12,11 +12,12 @@
         body {
             height: 100%;
             margin: 0;
-            overflow: hidden;
-            /* disable browser scroll */
-            font-family: sans-serif;
+            overflow: auto;
+            background: linear-gradient(135deg, #5b7cb9 0%, #454f61 100%);
+            font-family: 'Poppins', sans-serif;
+            color: #dee2e6;
         }
-
+        
         ul {
             list-style-type: none;
             padding-left: 20px;
@@ -73,16 +74,18 @@
         }
 
         .file-trees {
-            flex: 1 1 auto;
+            flex: 1 1 wrap;
             display: flex;
             gap: 1rem;
             overflow: hidden;
+            min-height: 350px; 
         }
 
         .tree-container {
             display: flex;
             flex-direction: column;
             flex: 1 1 0;
+            min-width: 250px; 
             border: 1px solid #dee2e6;
             border-radius: 0.375rem;
             padding: 1rem;
@@ -96,13 +99,64 @@
             z-index: 10;
             padding-bottom: 0.5rem;
         }
+        #alert-container {
+            position: fixed;
+            top: 1rem;
+            right: 20px;
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 50%; /* adjust width as needed */
+        }
+        .alert-icon {
+            margin-right: 1rem; /* more space between icon and text */
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+        }
+        #workerStatusModal .modal-dialog {
+            display: flex;           /* keep Bootstrap centering */
+            justify-content: center; /* horizontal centering */
+            align-items: center;     /* vertical centering */
+            min-width: auto;         /* remove default min-width */
+        }
+
+        #workerStatusModal .modal-content {
+            width: auto;             /* shrink to fit content */
+            display: inline-block;   /* shrink content width */
+            max-width: 90vw;         /* prevent overflow on small screens */
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <div class="form-area">
-            <h2>File translation with AI</h2>
+            <nav class="navbar navbar-expand-lg px-3 mb-3">
+                <div class="container-fluid d-flex align-items-center justify-content-between">
+                    <!-- Left: back button -->
+                    <button class="btn btn-outline-light me-3" id="backBtn" onclick="goHome()">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+            
+                    <!-- Center: title (absolutely centered) -->
+                    <span class="navbar-brand text-white position-absolute start-50 translate-middle-x">
+                        File Processing with AI
+                    </span>
+            
+                    <!-- Right: label + select -->
+                    <div class="d-flex align-items-center">
+                        <label for="promptTemplatesSelect" class="text-white me-2 mb-0">Template:</label>
+                        <select class="form-select w-auto" id="promptTemplatesSelect">
+                            <option value="template1">Flutter</option>
+                            <option value="template2">(more soon+)</option>
+                        </select>
+                    </div>
+                </div>
+            </nav>
+
+            
             <div class="row mb-3">
                 <div class="col-md-3">
                     <label for="modelSelector" class="form-label">Model</label>
@@ -116,21 +170,48 @@
                 </div>
                 <div class="col-md-9">
                     <label for="prompt" class="form-label">Prompt</label>
-                    <input type="text" class="form-control" id="promptTxt"
-                        placeholder="Insert the prompt to facilitate the operation">
+                    <textarea type="text" class="form-control" id="promptTxt"
+                        placeholder="Insert the prompt to facilitate the operation"> </textarea>
                 </div>
             </div>
             <div class="row mb-3">
-                <div class="col-md-3">
-                    <label for="maxWorkers" class="form-label">Number of workers</label>
-                    <input type="number" class="form-control" id="maxWorkers" min="1" max="10" value="1" step="1">
-                </div>
-                <div class="col-md-9">
+                <!-- API KEY -->
+                <div class="col-md-6">
                     <label for="API_JEY" class="form-label">API_KEY</label>
                     <input type="text" class="form-control" id="API_JEY" placeholder="Insert the model's API key">
                 </div>
-                
+            
+                <!-- Workers + Status -->
+                <div class="col-md-6">
+                    <label for="maxWorkers" class="form-label">Workers & Status</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="maxWorkers" min="1" max="10" value="1" step="1">
+                        <button class="btn btn-success" id="workerStatusBtn" type="button" data-bs-toggle="modal"
+                            data-bs-target="#workerStatusModal">
+                            <i id="statusIcon" class="bi bi-gear-fill me-1"></i> <span id="statusText">Idle</span>
+                        </button>
+                    </div>
+                </div>
             </div>
+            
+            <div class="modal fade" id="workerStatusModal" tabindex="-1" aria-labelledby="workerStatusModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title text-black" id="workerStatusModalLabel">Worker's Status</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <ul class="list-group" id="workerList"></ul>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 
             <div class="row mb-3 g-3">
                 <div class="col-md-6 d-flex align-items-end">
@@ -139,7 +220,7 @@
                         <div class="input-group">
                             <input type="text" class="form-control" id="inputFolderPath" readonly disabled
                                 value="Select a folder">
-                            <button class="btn btn-outline-primary" id="inputFolderBtn">Change</button>
+                            <button class="btn btn-primary" id="inputFolderBtn">Change</button>
                         </div>
                     </div>
                 </div>
@@ -149,7 +230,7 @@
                         <div class="input-group">
                             <input type="text" class="form-control" id="outputFolderPath" readonly disabled
                                 value="Select a folder">
-                            <button class="btn btn-outline-primary" id="outputFolderBtn">Change</button>
+                            <button class="btn btn-primary" id="outputFolderBtn">Change</button>
                         </div>
                     </div>
                 </div>
@@ -157,30 +238,19 @@
 
             <div class="mb-3">
                 <div class="d-flex gap-2 align-items-center">
-                    <!-- Left buttons -->
-                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse"
+                    <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse"
                         aria-expanded="false" aria-controls="filtersCollapse">
-                        <i class="bi bi-sliders"></i> Filters
+                        <i class="bi bi-sliders"></i> Filters (soon)
                     </button>
-
-                    <!-- Push Translate button to right -->
                     <button class="btn btn-success ms-auto" id="translateBtn">Translate selection</button>
                 </div>
 
-                <!-- Collapsible Filters Panel -->
-            <!-- Collapsible Filters Panel -->
             <div class="collapse mt-2" id="filtersCollapse">
                 <div class="card card-body p-3 position-relative">
-            
-                    <!-- Top: Add Condition -->
                     <div class="d-flex justify-content-start mb-3">
                         <button class="btn btn-sm btn-outline-primary" id="addConditionBtn">+ Add Condition</button>
                     </div>
-            
-                    <!-- Container for conditions -->
                     <div id="conditionsContainer"></div>
-            
-                    <!-- Bottom: Apply, Save, Clear -->
                     <div class="d-flex justify-content-between mt-3">
                         <div>
                             <button class="btn btn-warning btn-sm" id="saveFiltersBtn">Save</button>
@@ -195,7 +265,7 @@
             </div>
 
         </div>
-
+        <div id="alert-container"></div>
         <div class="file-trees">
             <div class="tree-container">
                 <h5>Input folder contents</h5>    
@@ -230,10 +300,110 @@
         const addConditionBtn = document.getElementById('addConditionBtn');
         const translateBtn = document.getElementById('translateBtn');
         let allFiles = {};
+        const conditionsContainer = document.getElementById('conditionsContainer');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        const statusBtn = document.getElementById('workerStatusBtn');
+        const statusText = document.getElementById("statusText");
+        const statusIcon = document.getElementById('statusIcon');
+        var currentTasks = []
+        var tasksStatus = {}
+        // Function to update button color based on text
+        function updateStatusButtonColor() {
+            
+            
+            statusBtn.classList.remove(
+                'btn-success',
+                'btn-danger',
+                'btn-warning',
+                'btn-info'
+            );
 
-            const conditionsContainer = document.getElementById('conditionsContainer');
-            const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+            switch(statusText.innerText) {
+             case  'Idle': 
+                document.getElementById('statusIcon').className = "bi bi-hourglass-split text-black"
+                statusBtn.classList.add('btn-info');
+                break;
+             case  'Busy': 
+             document.getElementById('statusIcon').className = 'bi bi-gear-wide-connected text-black';
+                statusBtn.classList.add('btn-warning');
+                break;
+             case  'Success': 
+             document.getElementById('statusIcon').className = 'bi bi-x-circle-fill text-black';
+                statusBtn.classList.add('btn-danger');
+                break;
+             case  'Error': 
+             document.getElementById('statusIcon').className = 'bi bi-check-circle-fill text-black';
+                statusBtn.classList.add('btn-success');
+                break;
+            }
+            
+        }
 
+        function generateWorkerStatusDialog() {
+            const workerList = document.getElementById('workerList');
+            workerList.innerHTML = ''; 
+
+            for (let i = 0; i < currentTasks.length; i++) {
+                const tasks = currentTasks[i];
+
+                const li = document.createElement('li');
+
+                li.className = 'list-group-item';
+
+                const workerHeader = document.createElement('div');
+                workerHeader.className = 'fw-bold mb-1';
+                workerHeader.textContent = `Worker ${i}`;
+                li.appendChild(workerHeader);
+
+                const taskList = document.createElement('ul');
+                taskList.className = 'list-unstyled mb-0';
+
+                for (let j = 0; j < tasks.length; j++) {
+
+                    const taskLi = document.createElement('li');
+                    taskLi.className = 'd-flex justify-content-between align-items-center';
+
+                    const taskName = document.createElement('span');
+                    var inputPath = tasks[j]["inputPath"];
+                    taskName.textContent = ` ${inputPath}`;
+
+                    const statusIcon = document.createElement('i');
+                    var status = tasksStatus[inputPath]
+                    if (!status["error"] && !status["working"] && !status["inQueue"]) {
+                        statusIcon.className = 'bi bi-check-circle-fill text-success';
+                    } else if (!status["working"] && status["inQueue"]) {
+                        statusIcon.className = 'bi bi-hourglass-split text-info';
+                    } else if (status["working"]) {
+                        statusIcon.className = 'bi bi-gear-wide-connected text-warning';
+                    } else if (!status["working"] && status["error"]) {
+                        statusIcon.className = 'bi bi-x-circle-fill text-danger';
+                    }
+
+                    taskLi.append(taskName, statusIcon);
+                    taskList.appendChild(taskLi);
+                }
+
+                li.appendChild(taskList);
+                workerList.appendChild(li);
+            }
+        }
+        function taskUpdateGenerate() {
+            generateWorkerStatusDialog()
+            updateStatusButtonColor()
+        }
+
+        function updateTaskStatus(filePath, status){
+
+            taskUpdateGenerate()
+        }
+
+        document.getElementById('workerStatusBtn').addEventListener('click', function () {
+            taskUpdateGenerate()
+        });
+        function goHome() {
+            window.close()
+            window.electronAPI.goHome()
+        }
             addConditionBtn.addEventListener('click', () => {
                 const row = document.createElement('div');
                 row.classList.add('d-flex', 'align-items-center', 'mb-2', 'condition-row');
@@ -575,29 +745,76 @@
         function uncheckEmptyParentFolders(cb) {
             updateParentFolderState(cb);
         }
+
+                
         
         function getSelectedFilesFromPane() {
-            return Array.from(document.querySelectorAll('#selectedFilesTree .file'))
-                .map(span => {
-                    const path = span.dataset.path;
-                    if (path !== undefined) {
-                        return { inputPath: path, done: false };
-                    }
-                    return null;
-                })
-                .filter(item => item !== null);
-        }
+            tasksStatus = {}
+            const spans = document.querySelectorAll('#selectedFilesTree .file');
+            const result = [];
 
+            for (let i = 0; i < spans.length; i++) {
+                const span = spans[i];
+                const path = span.dataset.path;
+
+                if (path !== undefined) {
+                    result.push({ inputPath: path, done: false });
+                    tasksStatus[path]  = {
+                        "inQueue": true,
+                        "working": false,
+                        "error": false,
+                    };
+                }
+            }
+
+            return result;
+        }
+        function showAlert(type, message, duration = 3000) {
+            // Map alert types to Bootstrap Icons
+            const icons = {
+                success: '<i class="bi bi-check-circle-fill text-success"></i>',
+                warning: '<i class="bi bi-exclamation-triangle-fill text-warning"></i>',
+                danger: '<i class="bi bi-x-circle-fill text-danger"></i>',
+                info: '<i class="bi bi-info-circle-fill text-info"></i>',
+                primary: '<i class="bi bi-badge-3d-fill text-primary"></i>',
+                secondary: '<i class="bi bi-circle-fill text-secondary"></i>'
+            };
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show d-flex align-items-center`;
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+    <span class="alert-icon">${icons[type] || ''}</span>
+    <span> ${message}</span>
+    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+`;
+
+            const container = document.getElementById('alert-container');
+            container.appendChild(alertDiv);
+
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                alertDiv.classList.add('hide');
+                alertDiv.addEventListener('transitionend', () => alertDiv.remove());
+            }, duration);
+        }
         translateBtn.addEventListener('click', async () => {
+            if(statusText.innerText == "Busy") return;
+            
             const selectedFiles = getSelectedFilesFromPane();
-            if (!selectedFiles.length) return
+            
+            if (selectedFiles.length < 1) return
+
             var model = document.getElementById("modelSelector").value
             var prompt = document.getElementById("promptTxt").value
             var workers = document.getElementById("maxWorkers").value
-
+            
             var result = await window.electronAPI.translateFiles(selectedFiles, model, workers, prompt);
             if(result["status"]){
-                alert("Translation queued successfully")
+                currentTasks = result["tasks"]
+                statusText.innerText =  "Busy"
+                updateStatusButtonColor()
+                showAlert("success", "Tasks queued susccesfully... Check the status in the workers section", 5000)
             }else{
                 alert("Error queuing files' translation: " + result["err"])
             }

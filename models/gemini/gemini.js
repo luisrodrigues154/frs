@@ -7,13 +7,14 @@ const {ipcMain, BrowserWindow} = require('electron')
 
 class GeminiTranslate {
   
-  constructor(TAG, MAX_WORKERS, PROMPT_TEMPLATE, FSHelper, API_KEY="") {
+  constructor(TAG, MAX_WORKERS, PROMPT_TEMPLATE, FSHelper, fileProcessor, API_KEY="") {
     this.windows = [];
     this.API_KEY = API_KEY;
     this.FSHelper = FSHelper
     this.MAX_WORKERS = MAX_WORKERS
     this.PROMPT_TEMPLATE = PROMPT_TEMPLATE
     this.TAG = TAG
+    this.FILE_PROCESSOR = fileProcessor
   }
   
   #sleep(ms) {
@@ -33,21 +34,6 @@ class GeminiTranslate {
   }
 
   async #runTask(worker, task){
-    const prompt = this.PROMPT_TEMPLATE
-    console.log(prompt)
-    // return new Promise((resolve) => {
-    //    console.warn(`[Worker ${worker}] Starting translation for: ${task["inputPath"]}`);
-    //     execFile('cat', [`${task}`, '-m', this.TAG, '-y', '-p', prompt], { encoding: 'utf-8' }, (error, stdout, stderr) => {
-    //         if (error) {
-    //             console.error(`[Worker ${worker}] Error: ${error.message}`);
-    //             return resolve(false);
-    //         }
-    //         console.log(`[Worker ${worker}] Translation finished for: ${task["inputPath"]}`);
-    //         this.FSHelper.saveToFile(task["outputPath"], stdout);
-    //         resolve(true);
-    //     });
-    // });
-
     return new Promise((resolve) => {
         console.error(`[Worker ${worker}] Starting translation for: ${task["inputPath"]}`);
 
@@ -75,32 +61,37 @@ class GeminiTranslate {
     do{
       for (const task of tasks) {
         if (!task["done"]) {
+          this.FILE_PROCESSOR.setUiTaskComplete(task["inputPath"], "busy")
           var result = await this.#runTask(worker, {"inputPath" :task["inputPath"], "outputPath": task["inputPath"].replace(this.FSHelper.INPUT_BASE_PATH, this.FSHelper.OUTPUT_BASE_PATH)})
           
           if(result) {
             ++this.FSHelper.TOTAL_PROCESSED
             task["done"] = true
+            this.FILE_PROCESSOR.setUiTaskComplete(task["inputPath"], "success")
           }else{
             hasFailedTasks = true
+            this.FILE_PROCESSOR.setUiTaskComplete(task["inputPath"], "error")
           }
         }
       }
       if(hasFailedTasks){
         await this.#sleep(1000)
         ++count
-      } 
+      }else{
+        count = 0
+      }
       
     }while(hasFailedTasks && count < 3)
     console.log("[" + this.TAG + "] Worker " +  worker + " finished!!")
   }
-  
+
   
   async translate(tasksSets) {
-    // if there's an API key, attempt cli
-    // otherwise use browser manipulation
-    
+    // return
     console.log("[" + this.TAG + "] Starting translation...")
-    
+    this.#sleep(1500)
+    this.FILE_PROCESSOR.updateTaskUI("/home/master/Documents/Repos/frs/flutter_asm/codeExample.dart")
+
     for(var i = 0; i < this.MAX_WORKERS; i++) {
       try{
         var tasks = tasksSets[i]
