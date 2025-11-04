@@ -185,8 +185,8 @@ class WelcomeScreen {
             nodeIntegration: true
             },
         });
-        win.webContents.openDevTools({ mode: 'left' });
-        win.loadFile(path.join(__dirname, '../main/index.html')); // Load ui/index.html
+        // win.webContents.openDevTools({ mode: 'left' });
+        win.loadFile(path.join(__dirname, '../main/index.html')); 
         win.webContents.on('did-finish-load', () => {
             
             

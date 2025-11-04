@@ -131,7 +131,7 @@ class FileProcessingScreen {
 
     updateTaskStateUI(taskId, newState) {
         var state = this.#getNewObjForState(newState)
-
+        console.log("Updating for: " + taskId + " ... With : " + newState)
         this.window.webContents.executeJavaScript(`
             updateTaskState("${taskId}", ${JSON.stringify(state)})
             `)

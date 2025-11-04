@@ -395,7 +395,8 @@
         }
         function taskUpdateGenerate() {
             generateWorkerStatusDialog()
-            if(tasksDone == currentTasks.length) {
+           
+            if(tasksDone == totalTasks && totalTasks > 0) {
                 if(tasksError) {
                     statusText.innerText = "Error"
                 }else{
@@ -794,7 +795,7 @@
 
             return result;
         }
-        function showAlert(type, message, duration = 3000) {
+        function showAlert(type, message, duration = 1500) {
             // Map alert types to Bootstrap Icons
             const icons = {
                 success: '<i class="bi bi-check-circle-fill text-success"></i>',

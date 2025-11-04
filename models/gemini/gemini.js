@@ -37,10 +37,8 @@ class GeminiTranslate {
     return new Promise((resolve) => {
         console.log(`[${this.TAG} - Worker ${worker}] Starting translation for: ${task["inputPath"]}`);
 
-        // ensure the folder exists
         fs.mkdirSync(path.dirname(task.outputPath), { recursive: true });
 
-        // single shell command, fastest option
         const cmd = `cat ${task["inputPath"]} | gemini -m ${this.TAG} -y -p "${this.PROMPT_TEMPLATE}" > ${task["outputPath"]}`;
 
         exec(cmd, { shell: true }, (error, stdout, stderr) => {
@@ -64,13 +62,15 @@ class GeminiTranslate {
         if (!task["done"]) {
           this.FILE_PROCESSOR.updateTaskStateUI(task["inputPath"], "working")
           var result = await this.#runTask(worker, {"inputPath" :task["inputPath"], "outputPath": task["inputPath"].replace(this.FSHelper.INPUT_BASE_PATH, this.FSHelper.OUTPUT_BASE_PATH)})
-          
+
           if(result) {
             ++this.FSHelper.TOTAL_PROCESSED
             task["done"] = true
+            console.log("[" + this.TAG + " - Worker " + worker +"] Finished successfully: " + task["inputPath"])
             this.FILE_PROCESSOR.updateTaskStateUI(task["inputPath"], "done")
           }else{
             hasFailedTasks = true
+            console.error("[" + this.TAG + " - Worker " + worker +"] Failed: " + task["inputPath"])
             this.FILE_PROCESSOR.updateTaskStateUI(task["inputPath"], "error")
           }
         }

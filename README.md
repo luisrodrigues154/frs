@@ -59,3 +59,9 @@ npm start
 - Add other prompt templates
 - Potentially improve UI and its logic (UI almost 100% vibecoded, so not bulletproof)
 - Refactor some parts
+
+## Some app screenshots
+
+- <img src="./app_screenshots/welcome.png" alt="Welcome screen" width="700"  />
+- <img src="./app_screenshots/file.png" alt="File processor"    width="700"     />
+- <img src="./app_screenshots/workers.png" alt="Workers status" width="700"  />
