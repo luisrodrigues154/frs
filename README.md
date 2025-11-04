@@ -22,8 +22,12 @@ Regardless of being made targetting dart assembly code, it can be used for anyth
   - <u>**Please ensure dependencies are met:**</u> https://github.com/worawit/blutter
 
 ```bash
-# Tested in Linux and macOS. Npm packages needed:
+# clone repo
+git clone https://github.com/luisrodrigues154/frs
 
+cd frs
+
+# install npm packages
 npm install adm-zip @google/gemini-cli electron
 ```
 
@@ -31,6 +35,12 @@ npm install adm-zip @google/gemini-cli electron
 
 - After gemini-cli is installed, please set the credentials (either via web login or via API key).
   - <u>**Refer to:**</u> https://github.com/google-gemini/gemini-cli
+
+```bash
+# after installing dependencies and doing authentication (within repo folder)
+
+npm start
+```
 
 ## Known bugs
 
