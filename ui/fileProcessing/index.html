@@ -395,9 +395,6 @@
         }
         function taskUpdateGenerate() {
             generateWorkerStatusDialog()
-            console.log("Task update Generate")
-            console.log("TasksDone: " + tasksDone)
-            console.log("CurrentTasksLen: " + currentTasks.length)
             if(tasksDone == currentTasks.length) {
                 if(tasksError) {
                     statusText.innerText = "Error"
@@ -735,8 +732,6 @@
         }
         async function fetchFilesInit() {
             const result = await window.electronAPI.getCurrentFiles();
-            console.log("Fetch files init called, response")
-            console.log(result)
             buildTreeView(result["files"], result["path"]);
         }
         function updateParentFolderState(cb) {

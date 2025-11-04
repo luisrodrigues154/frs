@@ -75,7 +75,6 @@ class WelcomeScreen {
 
     async #ensureBlutter(apkPath) {
         let cmd = `git clone https://github.com/worawit/blutter ${__dirname}/../../blutter`
-        console.log(cmd)
         const process = spawn("sh", ["-c", cmd]);
         process.stdout.on("data", (data) => {
             console.log(`[WelcomeScreen] stdout: ${data}`);

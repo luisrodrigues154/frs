@@ -100,15 +100,13 @@ class FileProcessingScreen {
         });
 
         ipcMain.handle('translate-files', async (event, files, model, workersCount, prompt) => {
-            console.log("[translate-files] Called with: " + files.length + " file(s) for " + workersCount + " workers, using " + model)
+            console.log("[file-processor] Called with: " + files.length + " file(s) for " + workersCount + " workers, using " + model)
             
             if(this.MODEL == null || this.MODEL.tag() != this.MODELS_TAGS[model]["TAG"]) {
                 this.#initModel(model, workersCount, prompt, this)
             }else{
                 this.MODEL.setPrompt(prompt)
-            }
-            console.log(files)
-            
+            }            
             var tasks = this.#divideTasks(files)
             this.MODEL.translate(tasks)
             return {
