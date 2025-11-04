@@ -13,7 +13,7 @@ class FileProcessingScreen {
         this.createWindow()
         this.#defineIPC()
         this.DEFAULT_MAX_WORKERS = 2
-        this.DEFAULT_PROMPT = "write to stdout. Translate into flutter like code from sourced dart assembly. No code comments"
+        this.DEFAULT_PROMPT = "write to stdout. Translate into flutter like code from sourced dart assembly. No code comments nor additional actions."
         this.DEFAULT_MODEL = "option1"
         this.MODELS_TAGS = {
             "option1" : {"TAG" : "gemini-2.5-flash", "constructor" : GeminiTranslate},
@@ -42,7 +42,6 @@ class FileProcessingScreen {
         }else{
             for (let i = 0; i < workersCount; i++) {
                 if (i === workersCount - 1) {
-                    // Last worker takes all remaining tasks
                     result.push(files.slice(i * filesPerWorker));
                 } else {
                     result.push(files.slice(i * filesPerWorker, (i + 1) * filesPerWorker));
@@ -94,7 +93,6 @@ class FileProcessingScreen {
             return result.filePaths[0];
         });
         ipcMain.handle('get-current-files', async (event, arg) => {
-            console.log("Called")
             return {
                 "path" : this.FSHelper.INPUT_BASE_PATH,
                 "files" : this.FSHelper.INPUT_FOLDER_FILES
@@ -119,8 +117,26 @@ class FileProcessingScreen {
             }
         });
     }
-    updateTaskUI(domId, status) {
-        this.window.executeJavaScript(``)
+    #getEmptyTaskState() {
+        return {
+            "inQueue" : false,
+            "error" : false,
+            "working" : false, 
+            "done" : false
+        }
+    }
+    #getNewObjForState(state){
+        var ret = this.#getEmptyTaskState()
+        ret[state] = true
+        return ret
+    }
+
+    updateTaskStateUI(taskId, newState) {
+        var state = this.#getNewObjForState(newState)
+
+        this.window.webContents.executeJavaScript(`
+            updateTaskState("${taskId}", ${JSON.stringify(state)})
+            `)
     }
     #createAppWindow() {
         const win = new BrowserWindow({

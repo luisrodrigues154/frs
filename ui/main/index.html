@@ -89,15 +89,13 @@
 
     <div class="entry-card">
         <p class="entry-text mb-4">
-            This tool ships a cloned version of blutter, without modifications. <b>Please ensure dependencies are
-                met:</b>
+            This tool requires and will clone Blutter, for flutter APK decompilation. <b>Please ensure dependencies are met:</b>
             <a href="https://github.com/worawit/blutter" target="_blank">GitHub Repo</a>
         </p>
 
         <h3 class="mb-4 fw-bold">Choose action</h3>
 
         <div class="d-flex gap-2 mb-3">
-            <!-- Status button (hidden initially) -->
             <button class="btn entry-btn d-none" id="apkStatusBtn">
                 <i class="bi-android me-2"></i>
                 <span id="apkStatusText">Processing...</span>
@@ -106,7 +104,6 @@
                 </div>
             </button>
 
-            <!-- Select APK button -->
             <button class="btn entry-btn apks flex-grow-1" id="selectApkBtn" onclick="chooseEntry('apk')">
                 <i class="bi-android me-2"></i> Select APK/Zip file
             </button>
@@ -134,18 +131,17 @@
             apkStatusBtn.classList.remove('btn-success', 'btn-danger', 'btn-warning', 'btn-info');
 
             switch (result.status) {
+                
                 case "success":
                     apkStatusText.textContent = "Apk processed successfully!";
                     apkPathInput.value = "Tasks finished.";
                     apkStatusBtn.classList.add("btn-success");
                     break;
-
                 case "selected":
                     apkStatusText.textContent = "Processing APK";
                     apkPathInput.value = result.path || "";
                     apkStatusBtn.classList.add("btn-warning");
                     break;
-
                 case "error":
                     apkStatusText.textContent = "Error";
                     apkPathInput.value = result.msg || "Unknown error";

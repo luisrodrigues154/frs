@@ -35,7 +35,7 @@ class GeminiTranslate {
 
   async #runTask(worker, task){
     return new Promise((resolve) => {
-        console.error(`[Worker ${worker}] Starting translation for: ${task["inputPath"]}`);
+        console.log(`[${this.TAG} - Worker ${worker}] Starting translation for: ${task["inputPath"]}`);
 
         // ensure the folder exists
         fs.mkdirSync(path.dirname(task.outputPath), { recursive: true });
@@ -48,12 +48,13 @@ class GeminiTranslate {
                 console.error(`[Worker ${worker}] Error: ${error.message}`);
                 return resolve(false);
             }
-            console.error(`[Worker ${worker}] Translation finished for: ${task.inputPath}`);
+            console.error(`[${this.TAG} - Worker ${worker}] Translation finished for: ${task.inputPath}`);
             resolve(true);
         });
     });
         
   }
+
 
   async #start(worker, tasks) {
     var count = 0;
@@ -61,16 +62,16 @@ class GeminiTranslate {
     do{
       for (const task of tasks) {
         if (!task["done"]) {
-          this.FILE_PROCESSOR.setUiTaskComplete(task["inputPath"], "busy")
+          this.FILE_PROCESSOR.updateTaskStateUI(task["inputPath"], "working")
           var result = await this.#runTask(worker, {"inputPath" :task["inputPath"], "outputPath": task["inputPath"].replace(this.FSHelper.INPUT_BASE_PATH, this.FSHelper.OUTPUT_BASE_PATH)})
           
           if(result) {
             ++this.FSHelper.TOTAL_PROCESSED
             task["done"] = true
-            this.FILE_PROCESSOR.setUiTaskComplete(task["inputPath"], "success")
+            this.FILE_PROCESSOR.updateTaskStateUI(task["inputPath"], "done")
           }else{
             hasFailedTasks = true
-            this.FILE_PROCESSOR.setUiTaskComplete(task["inputPath"], "error")
+            this.FILE_PROCESSOR.updateTaskStateUI(task["inputPath"], "error")
           }
         }
       }
@@ -87,17 +88,14 @@ class GeminiTranslate {
 
   
   async translate(tasksSets) {
-    // return
-    console.log("[" + this.TAG + "] Starting translation...")
-    this.#sleep(1500)
-    this.FILE_PROCESSOR.updateTaskUI("/home/master/Documents/Repos/frs/flutter_asm/codeExample.dart")
-
+    console.log("[" + this.TAG + "] Starting translation request...")    
+    
     for(var i = 0; i < this.MAX_WORKERS; i++) {
       try{
         var tasks = tasksSets[i]
         if(tasks) this.#start(i, tasks)
       }catch(e){
-        console.error("[translate] Err: " + e)
+        console.error("[" + this.TAG + "] Error: " + e)
         return
       }
     }

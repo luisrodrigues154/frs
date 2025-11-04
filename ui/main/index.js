@@ -11,6 +11,7 @@ class WelcomeScreen {
         this.FSHelper = FSHelper
         this.createWindow()
         this.#defineIPC()
+        this.BLUTTER_ALREADY_CLONED = false
         this.BLUTTER_CMD = `python3 ${__dirname}/../../blutter/blutter.py {INPUT_PATH}/arm64-v8a {OUTPUT_PATH}`
         return this.window
         
@@ -36,9 +37,11 @@ class WelcomeScreen {
             let result = this.#getEmptyStatus()
 
             let process = false;
+            let selectedFile = "";
             if(!apkPath.canceled && apkPath.filePaths.length > 0){
                 result["status"] = "selected"
-                result["path"] = apkPath.filePaths[0]
+                selectedFile = apkPath.filePaths[0]
+                result["path"] = selectedFile
                 process = true;
             }else{
                 result["status"] = "aborted"
@@ -51,7 +54,14 @@ class WelcomeScreen {
             
             if(!process) return
 
-            this.#startApkProcessing(result["path"])
+            result["path"] = "Ensuring blutter"
+            this.window.webContents.executeJavaScript(` 
+                updateAPKStatus(${JSON.stringify(result)})
+            `)
+            result["path"] = selectedFile
+            this.#ensureBlutter(result["path"])
+
+            
         });
     }
     #getEmptyStatus(){
@@ -62,13 +72,58 @@ class WelcomeScreen {
             "timeout" : false
         }
     }
+
+    async #ensureBlutter(apkPath) {
+        let cmd = `git clone https://github.com/worawit/blutter ${__dirname}/../../blutter`
+        console.log(cmd)
+        const process = spawn("sh", ["-c", cmd]);
+        process.stdout.on("data", (data) => {
+            console.log(`[WelcomeScreen] stdout: ${data}`);
+        });
+
+        process.stderr.on("data", (data) => {
+            if(data.includes("already exists")) {
+                this.BLUTTER_ALREADY_CLONED = true
+                var status = this.#getEmptyStatus()
+                status["status"] = "selected"
+                status["msg"] = "Blutter already in base path"
+                status["timeout"] = false
+                this.window.webContents.executeJavaScript(` 
+                    updateAPKStatus(${JSON.stringify(status)})
+                `)                
+            }
+        });
+
+        process.on("error", (err) => {
+            reject(err);
+        });
+        process.on("close", (code) => {
+            var status = this.#getEmptyStatus()
+            console.log(`[WelcomeScreen] Blutter cloning finished, code: ${code}`);
+            if (code != 0 && !this.BLUTTER_ALREADY_CLONED) {
+                status["status"] = "error"
+                status["msg"] = `Error cloning blutter`
+                status["timeout"] = true
+            }else{
+                status["status"] = "success"
+                status["timeout"] = false
+                this.#startApkProcessing(apkPath)
+            }
+            this.window.webContents.executeJavaScript(` 
+                updateAPKStatus(${JSON.stringify(status)})
+            `)
+        });
+
+
+    }
+
     async #executeBlutter(result) {
         var cmd = this.BLUTTER_CMD.replace("{INPUT_PATH}", path.join(result["inputPath"], "lib")).replace("{OUTPUT_PATH}",  result["outPath"])
         const process = spawn("sh", ["-c", cmd]);
         
         console.log("[WelcomeScreen] Executing shell cmd: " + cmd)
 
-            process.stdout.on("data", (data) => {
+        process.stdout.on("data", (data) => {
             console.log(`[WelcomeScreen] stdout: ${data}`);
         });
 
@@ -100,6 +155,7 @@ class WelcomeScreen {
     }
 
     async #startApkProcessing(apkPath){
+        
         let result = await this.FSHelper.processAPK(apkPath)
         var status = this.#getEmptyStatus()
 
@@ -119,7 +175,6 @@ class WelcomeScreen {
             updateAPKStatus(${JSON.stringify(status)})
         `)
         
-                
     }
 
     #createAppWindow() {

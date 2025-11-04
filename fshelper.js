@@ -16,11 +16,12 @@ class FSHelper {
     }
     changeOutputFolder(newPath) {
         this.OUTPUT_BASE_PATH = newPath
+        console.log("[FSHelper] Output folder path changed to: " + newPath)
     }
     changeInputFolder(newPath) {
-        console.log("CHanging path to: " + newPath)
         this.INPUT_BASE_PATH = newPath
         this.INPUT_FOLDER_FILES = this.indexFiles(this.INPUT_BASE_PATH)   
+        console.log("[FSHelper] Input folder path changed to: " + newPath)
     }
     indexFiles(dir) {
         let fileList = [];
@@ -94,7 +95,6 @@ class FSHelper {
     async processAPK(filePath) {
         const ext = path.extname(filePath).toLowerCase();
         const extractDir = filePath.replace(ext, "")
-        
         
         if (ext !== ".zip" && ext !== ".apk") {
             console.log(`[FSHelper] Unsupported file: ${filePath}`);

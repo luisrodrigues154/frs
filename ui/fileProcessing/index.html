@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Folder Viewer (Tree View)</title>
+    <title>AI file processing helper screen</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
@@ -34,14 +34,14 @@
 
         .folder::before {
             font-family: "bootstrap-icons";
-            content: "\f3d1"; /* bi-folder */
+            content: "\f3d1"; 
             margin-right: 4px;
             color: #ffcc00;
             transition: transform 0.2s;
         }
 
         .folder.open::before {
-            content: "\f3d2"; /* bi-folder2-open */
+            content: "\f3d2"; 
         }
 
         .nested {
@@ -95,7 +95,7 @@
         .search-wrapper {
             position: sticky;
             top: 0;
-            background: white; /* same as container background */
+            background: white;
             z-index: 10;
             padding-bottom: 0.5rem;
         }
@@ -107,25 +107,25 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            width: 50%; /* adjust width as needed */
+            width: 50%; 
         }
         .alert-icon {
-            margin-right: 1rem; /* more space between icon and text */
+            margin-right: 1rem; 
             font-size: 1.2rem;
             display: flex;
             align-items: center;
         }
         #workerStatusModal .modal-dialog {
-            display: flex;           /* keep Bootstrap centering */
-            justify-content: center; /* horizontal centering */
-            align-items: center;     /* vertical centering */
-            min-width: auto;         /* remove default min-width */
+            display: flex;          
+            justify-content: center; 
+            align-items: center;     
+            min-width: auto;         
         }
 
         #workerStatusModal .modal-content {
-            width: auto;             /* shrink to fit content */
-            display: inline-block;   /* shrink content width */
-            max-width: 90vw;         /* prevent overflow on small screens */
+            width: auto;             
+            display: inline-block;   
+            max-width: 90vw;         
         }
     </style>
 </head>
@@ -186,9 +186,9 @@
                     <label for="maxWorkers" class="form-label">Workers & Status</label>
                     <div class="input-group">
                         <input type="number" class="form-control" id="maxWorkers" min="1" max="10" value="1" step="1">
-                        <button class="btn btn-success" id="workerStatusBtn" type="button" data-bs-toggle="modal"
+                        <button class="btn btn-info" id="workerStatusBtn" type="button" data-bs-toggle="modal"
                             data-bs-target="#workerStatusModal">
-                            <i id="statusIcon" class="bi bi-gear-fill me-1"></i> <span id="statusText">Idle</span>
+                            <i id="statusIcon" class="bi bi-hourglass-split text-black"></i> <span id="statusText">Idle</span>
                         </button>
                     </div>
                 </div>
@@ -306,11 +306,12 @@
         const statusText = document.getElementById("statusText");
         const statusIcon = document.getElementById('statusIcon');
         var currentTasks = []
+        var totalTasks = 0
         var tasksStatus = {}
+        var tasksDone = 0
+        var tasksError = false
         // Function to update button color based on text
         function updateStatusButtonColor() {
-            
-            
             statusBtn.classList.remove(
                 'btn-success',
                 'btn-danger',
@@ -324,16 +325,16 @@
                 statusBtn.classList.add('btn-info');
                 break;
              case  'Busy': 
-             document.getElementById('statusIcon').className = 'bi bi-gear-wide-connected text-black';
+                document.getElementById('statusIcon').className = 'bi bi-gear-wide-connected text-black';
                 statusBtn.classList.add('btn-warning');
                 break;
              case  'Success': 
-             document.getElementById('statusIcon').className = 'bi bi-x-circle-fill text-black';
-                statusBtn.classList.add('btn-danger');
+                document.getElementById('statusIcon').className = 'bi bi-check-circle-fill text-black';
+                statusBtn.classList.add('btn-success');
                 break;
              case  'Error': 
-             document.getElementById('statusIcon').className = 'bi bi-check-circle-fill text-black';
-                statusBtn.classList.add('btn-success');
+                document.getElementById('statusIcon').className = 'bi bi-x-circle-fill text-black';
+                statusBtn.classList.add('btn-danger');
                 break;
             }
             
@@ -342,7 +343,7 @@
         function generateWorkerStatusDialog() {
             const workerList = document.getElementById('workerList');
             workerList.innerHTML = ''; 
-
+            
             for (let i = 0; i < currentTasks.length; i++) {
                 const tasks = currentTasks[i];
 
@@ -369,14 +370,19 @@
 
                     const statusIcon = document.createElement('i');
                     var status = tasksStatus[inputPath]
-                    if (!status["error"] && !status["working"] && !status["inQueue"]) {
-                        statusIcon.className = 'bi bi-check-circle-fill text-success';
-                    } else if (!status["working"] && status["inQueue"]) {
-                        statusIcon.className = 'bi bi-hourglass-split text-info';
-                    } else if (status["working"]) {
-                        statusIcon.className = 'bi bi-gear-wide-connected text-warning';
-                    } else if (!status["working"] && status["error"]) {
-                        statusIcon.className = 'bi bi-x-circle-fill text-danger';
+                    
+                    if(status["done"]) {
+                        if(status["error"]) {
+                            statusIcon.className = 'bi bi-x-circle-fill text-danger';
+                        }else{
+                            statusIcon.className = 'bi bi-check-circle-fill text-success';
+                        }
+                    }else{
+                        if(status["inQueue"]) {
+                            statusIcon.className = 'bi bi-hourglass-split text-info';
+                        }else{
+                            statusIcon.className = 'bi bi-gear-wide-connected text-warning';
+                        }
                     }
 
                     taskLi.append(taskName, statusIcon);
@@ -389,11 +395,33 @@
         }
         function taskUpdateGenerate() {
             generateWorkerStatusDialog()
+            console.log("Task update Generate")
+            console.log("TasksDone: " + tasksDone)
+            console.log("CurrentTasksLen: " + currentTasks.length)
+            if(tasksDone == currentTasks.length) {
+                if(tasksError) {
+                    statusText.innerText = "Error"
+                }else{
+                    statusText.innerText = "Success"
+                    setTimeout(() => {
+                        statusText.innerText = "Idle"
+                        updateStatusButtonColor()
+                    }, 3000);
+                }
+            }else{
+                statusText.innerText = "Busy"
+            }
             updateStatusButtonColor()
         }
 
-        function updateTaskStatus(filePath, status){
-
+        function updateTaskState(filePath, newState){
+            tasksStatus[filePath] = newState
+            if(newState["done"]) {
+                ++tasksDone
+            }
+            if(newState["error"]) {
+                tasksError = true
+            }
             taskUpdateGenerate()
         }
 
@@ -707,7 +735,8 @@
         }
         async function fetchFilesInit() {
             const result = await window.electronAPI.getCurrentFiles();
-
+            console.log("Fetch files init called, response")
+            console.log(result)
             buildTreeView(result["files"], result["path"]);
         }
         function updateParentFolderState(cb) {
@@ -763,6 +792,7 @@
                         "inQueue": true,
                         "working": false,
                         "error": false,
+                        "done" : false
                     };
                 }
             }
@@ -811,9 +841,11 @@
             
             var result = await window.electronAPI.translateFiles(selectedFiles, model, workers, prompt);
             if(result["status"]){
+                tasksDone = 0
+                totalTasks = selectedFiles.length
+                tasksError = false
                 currentTasks = result["tasks"]
-                statusText.innerText =  "Busy"
-                updateStatusButtonColor()
+                taskUpdateGenerate()
                 showAlert("success", "Tasks queued susccesfully... Check the status in the workers section", 5000)
             }else{
                 alert("Error queuing files' translation: " + result["err"])
