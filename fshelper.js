@@ -10,9 +10,17 @@ class FSHelper {
         this.windows = [];
         this.INPUT_BASE_PATH = inputPath;
         this.OUTPUT_BASE_PATH = outputPath;
-        this.INPUT_FOLDER_FILES = this.indexFiles(this.INPUT_BASE_PATH)
         this.FOLDER_INDEXER_STATE = null
-        fs.mkdir(this.OUTPUT_BASE_PATH, { recursive: true });
+        this.#ensureStartingFolders()
+        this.INPUT_FOLDER_FILES = this.indexFiles(this.INPUT_BASE_PATH)
+    }
+    #ensureStartingFolders() {
+        if(!fsSync.existsSync(this.INPUT_BASE_PATH)) {
+            fsSync.mkdirSync(this.INPUT_BASE_PATH, { recursive: true });    
+        }
+        if(!fsSync.existsSync(this.INPUT_BASE_PATH)) {
+            fsSync.mkdirSync(this.OUTPUT_BASE_PATH, { recursive: true });    
+        }
     }
     changeOutputFolder(newPath) {
         this.OUTPUT_BASE_PATH = newPath

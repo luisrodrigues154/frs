@@ -145,7 +145,7 @@ class FileProcessingScreen {
             nodeIntegration: true
             },
         });
-        win.webContents.openDevTools({ mode: 'left' });
+        // win.webContents.openDevTools({ mode: 'left' });
         win.loadFile(path.join(__dirname, '../fileProcessing/index.html')); 
         win.webContents.on('did-finish-load', () => {
             
